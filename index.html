@@ -5,161 +5,43 @@
     <title>Agar.io Pro - Chat & Skin</title>
     <style>
         body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #c4c4c4;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none;
+            margin: 0; overflow: hidden; background-color: #c4c4c4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none;
         }
         canvas { display: block; background-color: #ffffff; }
-
-        /* Schermata Iniziale */
         #startMenu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            text-align: center;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 340px;
-            z-index: 10;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95); padding: 30px; text-align: center;
+            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 340px; z-index: 10;
         }
-        #startMenu h1 { margin-top: 0; color: #2c3e50; }
-        #nickInput {
-            width: 85%;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #bdc3c7;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            outline: none;
+        #startMenu h1 { margin-top: 0; color: #2c3e50; margin-bottom: 5px; }
+        .credits { font-size: 13px; color: #7f8c8d; font-weight: bold; margin-bottom: 20px; letter-spacing: 0.5px; }
+        #gameCredits {
+            position: absolute; top: 20px; left: 20px; background-color: rgba(255, 255, 255, 0.85);
+            padding: 8px 15px; border-radius: 6px; font-weight: bold; color: #2c3e50; font-size: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); pointer-events: none; display: none;
         }
-        
-        /* Selezione Skin */
-        .skin-container {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-        }
-        .skin-option {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            border: 3px solid #bdc3c7;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .skin-option.selected {
-            border-color: #2ecc71;
-            transform: scale(1.1);
-        }
-
-        #startBtn {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 35px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 95%;
-        }
+        #nickInput { width: 85%; padding: 12px; font-size: 16px; border: 2px solid #bdc3c7; border-radius: 6px; margin-bottom: 15px; outline: none; }
+        .skin-container { display: flex; justify-content: space-around; margin-bottom: 20px; }
+        .skin-option { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #bdc3c7; cursor: pointer; transition: 0.2s; }
+        .skin-option.selected { border-color: #2ecc71; transform: scale(1.1); }
+        #startBtn { background-color: #3498db; color: white; border: none; padding: 12px 35px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 95%; }
         #startBtn:hover { background-color: #2980b9; }
-
-        /* Classifica */
-        #leaderboard {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background-color: rgba(255, 255, 255, 0.85);
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            width: 220px;
-            pointer-events: none;
-            display: none; 
-        }
-        #leaderboard h3 {
-            margin: 0 0 10px 0;
-            text-align: center;
-            color: #2c3e50;
-            border-bottom: 2px solid #bdc3c7;
-            padding-bottom: 5px;
-        }
-        .leaderboard-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-            font-weight: bold;
-            color: #34495e;
-        }
-
-        /* Interfaccia Chat */
-        #chatBox {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 300px;
-            background-color: rgba(0, 0, 0, 0.4);
-            border-radius: 6px;
-            padding: 10px;
-            display: none;
-            z-index: 10;
-        }
-        #chatMessages {
-            height: 140px;
-            overflow-y: auto;
-            color: white;
-            font-size: 14px;
-            margin-bottom: 5px;
-            word-break: break-all;
-            display: flex;
-            flex-direction: column;
-        }
-        #chatInput {
-            width: 93%;
-            padding: 6px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border: none;
-            border-radius: 4px;
-            outline: none;
-        }
-
-        #gameOverScreen {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px 50px;
-            text-align: center;
-            border-radius: 15px;
-            z-index: 10;
-        }
-        #respawnBtn {
-            background-color: #2ecc71;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 18px;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 15px;
-            font-weight: bold;
-        }
+        #leaderboard { position: absolute; top: 20px; right: 20px; background-color: rgba(255, 255, 255, 0.85); padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); width: 220px; pointer-events: none; display: none; }
+        #leaderboard h3 { margin: 0 0 10px 0; text-align: center; color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 5px; }
+        .leaderboard-row { display: flex; justify-content: space-between; margin: 5px 0; font-weight: bold; color: #34495e; }
+        #chatBox { position: absolute; bottom: 20px; left: 20px; width: 300px; background-color: rgba(0, 0, 0, 0.4); border-radius: 6px; padding: 10px; display: none; z-index: 10; }
+        #chatMessages { height: 140px; overflow-y: auto; color: white; font-size: 14px; margin-bottom: 5px; word-break: break-all; display: flex; flex-direction: column; }
+        #chatInput { width: 93%; padding: 6px; background-color: rgba(255, 255, 255, 0.9); border: none; border-radius: 4px; outline: none; }
+        #gameOverScreen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.9); color: white; padding: 30px 50px; text-align: center; border-radius: 15px; z-index: 10; }
+        #respawnBtn { background-color: #2ecc71; color: white; border: none; padding: 12px 25px; font-size: 18px; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
-
     <div id="startMenu">
         <h1>Agar.io Pro</h1>
+        <div class="credits">Creato da Kiasmo70</div>
+        
         <input type="text" id="nickInput" placeholder="Inserisci Nickname" maxlength="14">
         <p style="color: #7f8c8d; font-size: 14px; margin: 5px 0 10px 0;">Scegli la tua Skin:</p>
         <div class="skin-container">
@@ -170,6 +52,8 @@
         </div>
         <button id="startBtn">Gioca</button>
     </div>
+
+    <div id="gameCredits">Creato da Kiasmo70</div>
 
     <div id="leaderboard">
         <h3>CLASSIFICA</h3>
@@ -202,6 +86,7 @@
         const gameOverScreen = document.getElementById('gameOverScreen');
         const respawnBtn = document.getElementById('respawnBtn');
         const skinOptions = document.querySelectorAll('.skin-option');
+        const gameCredits = document.getElementById('gameCredits');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -218,7 +103,6 @@
         let inGame = false;
         let selectedSkin = "default";
 
-        // Gestione della selezione visiva delle skin nel menu
         skinOptions.forEach(opt => {
             opt.addEventListener('click', () => {
                 skinOptions.forEach(o => o.classList.remove('selected'));
@@ -242,13 +126,14 @@
                 gameOverScreen.style.display = 'none';
                 leaderboard.style.display = 'block';
                 chatBox.style.display = 'block';
+                gameCredits.style.display = 'block';
             }
 
             if (data.type === 'chat_broadcast') {
                 const msgEl = document.createElement('div');
                 msgEl.innerHTML = `<strong>${data.name}:</strong> ${data.message}`;
                 chatMessages.appendChild(msgEl);
-                chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll in basso
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
             if (data.type === 'update') {
@@ -262,6 +147,7 @@
                     inGame = false;
                     gameOverScreen.style.display = 'block';
                     chatBox.style.display = 'none';
+                    gameCredits.style.display = 'none';
                 }
                 
                 drawGame();
@@ -282,7 +168,6 @@
         });
 
         window.addEventListener('mousemove', (event) => {
-            // Evita di muovere il cerchio se il giocatore sta scrivendo nella chat
             if (document.activeElement === chatInput) return;
 
             if (socket.readyState === WebSocket.OPEN && inGame && players[myId]) {
@@ -305,13 +190,11 @@
 
         window.addEventListener('keydown', (event) => {
             if (event.code === 'Space' && inGame && socket.readyState === WebSocket.OPEN) {
-                // Esegue lo split solo se non si sta scrivendo in chat
                 if (document.activeElement !== chatInput) {
                     socket.send(JSON.stringify({ type: 'split' }));
                 }
             }
 
-            // GESTIONE TASTO INVIO PER ATTIVARE/INVIARE LA CHAT
             if (event.code === 'Enter' && inGame) {
                 if (document.activeElement === chatInput) {
                     let msg = chatInput.value.trim();
@@ -319,9 +202,9 @@
                         socket.send(JSON.stringify({ type: 'chat', message: msg }));
                     }
                     chatInput.value = "";
-                    chatInput.blur(); // Rilascia il focus dalla chat per tornare a muoversi
+                    chatInput.blur();
                 } else {
-                    chatInput.focus(); // Attiva la chat per scrivere
+                    chatInput.focus();
                 }
             }
         });
@@ -369,19 +252,15 @@
             ctx.restore();
         }
 
-        // MOTORE GRAFICO AVANZATO PER DISEGNARE LE SKIN DINAMICHE
         function drawSkin(cell, skinType, baseColor) {
             ctx.save();
             
             if (skinType === "stripes") {
-                // SKIN A STRISCE MULTICOLORE
                 ctx.beginPath();
                 ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-                ctx.clip(); // Limita il disegno geometrico dentro il cerchio della cella
-                
+                ctx.clip();
                 ctx.fillStyle = baseColor;
                 ctx.fill();
-                
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = cell.radius * 0.15;
                 for (let i = -cell.radius; i < cell.radius; i += cell.radius * 0.4) {
@@ -391,31 +270,25 @@
                     ctx.stroke();
                 }
             } else if (skinType === "camo") {
-                // SKIN MILITARE / MIMETICA
                 ctx.beginPath();
                 ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
                 ctx.fillStyle = '#27ae60';
                 ctx.fill();
-                
-                // Disegna delle chiazze scure casuali fisse basate sulla matematica del cerchio
                 ctx.fillStyle = '#1e7e34';
                 ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.2, cell.y - cell.radius*0.3, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.arc(cell.x + cell.radius*0.3, cell.y + cell.radius*0.2, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = '#95a5a6';
                 ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.3, cell.y + cell.radius*0.3, cell.radius * 0.25, 0, Math.PI*2); ctx.fill();
             } else if (skinType === "glow") {
-                // SKIN SPAZIALE CON Sfumatura RADIALE (NUCLEO LUMINOSO)
                 let gradient = ctx.createRadialGradient(cell.x, cell.y, cell.radius * 0.1, cell.x, cell.y, cell.radius);
                 gradient.addColorStop(0, '#ffffff');
                 gradient.addColorStop(0.2, '#9b59b6');
                 gradient.addColorStop(1, '#2c3e50');
-                
                 ctx.beginPath();
                 ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
                 ctx.fillStyle = gradient;
                 ctx.fill();
             } else {
-                // SKIN CLASSICA MONOCOLORE (DEFAULT)
                 ctx.beginPath();
                 ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
                 ctx.fillStyle = baseColor;
@@ -439,11 +312,9 @@
             ctx.save();
             ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
 
-            // Confini mappa
             ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 6;
             ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
-            // Griglia quadrettata
             ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
             for (let x = 0; x <= mapWidth; x += 50) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapHeight); ctx.stroke();
@@ -452,26 +323,22 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapWidth, y); ctx.stroke();
             }
 
-            // Disegna il cibo
             for (let i = 0; i < food.length; i++) {
                 let f = food[i];
                 ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
                 ctx.fillStyle = f.color; ctx.fill(); ctx.closePath();
             }
 
-            // Disegna gli ostacoli rigidi
             for (let i = 0; i < obstacles.length; i++) {
                 let obs = obstacles[i];
                 drawSpikeyObstacle(obs.x, obs.y, obs.radius);
             }
 
-            // Disegna i giocatori con le rispettive skin
             for (let id in players) {
                 let p = players[id];
                 if (p.dead) continue;
 
                 p.cells.forEach(cell => {
-                    // Chiama la nuova funzione grafica passando il tipo di skin e colore del giocatore
                     drawSkin(cell, p.skin, p.color);
 
                     ctx.fillStyle = "#ffffff";
