@@ -50,11 +50,12 @@ function spawnObstacle() {
 for (let i = 0; i < MAX_FOOD; i++) { food.push(spawnFood()); }
 for (let i = 0; i < MAX_OBSTACLES; i++) { obstacles.push(spawnObstacle()); }
 
-function createPlayerData(id, name) {
+function createPlayerData(id, name, skin) {
     return {
         id: id,
         name: name || "Anonimo-" + Math.floor(100 + Math.random() * 900),
         color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+        skin: skin || "default", // Memorizza il tipo di skin scelto
         dead: false,
         cells: [{
             x: Math.random() * MAP_WIDTH,
@@ -84,7 +85,8 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
             
             if (data.type === 'join' || data.type === 'respawn') {
-                players[id] = createPlayerData(id, data.name);
+                // Passa anche la skin scelta al creatore del giocatore
+                players[id] = createPlayerData(id, data.name, data.skin);
                 ws.send(JSON.stringify({ type: 'spawn_confirm' }));
             }
             
@@ -92,6 +94,21 @@ wss.on('connection', (ws) => {
                 players[id].cells.forEach(cell => {
                     cell.targetX = data.x;
                     cell.targetY = data.y;
+                });
+            }
+
+            // GESTIONE MESSAGGI DI CHAT
+            if (data.type === 'chat' && players[id] && !players[id].dead) {
+                const chatPayload = JSON.stringify({
+                    type: 'chat_broadcast',
+                    name: players[id].name,
+                    message: data.message.substring(0, 70) // Taglia messaggi troppo lunghi
+                });
+                // Invia il messaggio a tutti i client connessi
+                wss.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(chatPayload);
+                    }
                 });
             }
             if (data.type === 'split' && players[id] && !players[id].dead) {

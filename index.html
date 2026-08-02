@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Agar.io Prototipo Finale - Spine</title>
+    <title>Agar.io Pro - Chat & Skin</title>
     <style>
         body {
             margin: 0;
@@ -13,17 +13,18 @@
         }
         canvas { display: block; background-color: #ffffff; }
 
+        /* Schermata Iniziale */
         #startMenu {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background-color: rgba(255, 255, 255, 0.95);
-            padding: 40px;
+            padding: 30px;
             text-align: center;
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 320px;
+            width: 340px;
             z-index: 10;
         }
         #startMenu h1 { margin-top: 0; color: #2c3e50; }
@@ -33,9 +34,29 @@
             font-size: 16px;
             border: 2px solid #bdc3c7;
             border-radius: 6px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             outline: none;
         }
+        
+        /* Selezione Skin */
+        .skin-container {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        .skin-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #bdc3c7;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .skin-option.selected {
+            border-color: #2ecc71;
+            transform: scale(1.1);
+        }
+
         #startBtn {
             background-color: #3498db;
             color: white;
@@ -50,6 +71,7 @@
         }
         #startBtn:hover { background-color: #2980b9; }
 
+        /* Classifica */
         #leaderboard {
             position: absolute;
             top: 20px;
@@ -75,6 +97,37 @@
             margin: 5px 0;
             font-weight: bold;
             color: #34495e;
+        }
+
+        /* Interfaccia Chat */
+        #chatBox {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+            background-color: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            padding: 10px;
+            display: none;
+            z-index: 10;
+        }
+        #chatMessages {
+            height: 140px;
+            overflow-y: auto;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 5px;
+            word-break: break-all;
+            display: flex;
+            flex-direction: column;
+        }
+        #chatInput {
+            width: 93%;
+            padding: 6px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 4px;
+            outline: none;
         }
 
         #gameOverScreen {
@@ -108,12 +161,24 @@
     <div id="startMenu">
         <h1>Agar.io Pro</h1>
         <input type="text" id="nickInput" placeholder="Inserisci Nickname" maxlength="14">
+        <p style="color: #7f8c8d; font-size: 14px; margin: 5px 0 10px 0;">Scegli la tua Skin:</p>
+        <div class="skin-container">
+            <div class="skin-option selected" data-skin="default" style="background: #3498db;"></div>
+            <div class="skin-option" data-skin="stripes" style="background: repeating-linear-gradient(45deg, #e74c3c, #e74c3c 10px, #f1c40f 10px, #f1c40f 20px);"></div>
+            <div class="skin-option" data-skin="camo" style="background: linear-gradient(135deg, #27ae60 25%, #95a5a6 25%, #95a5a6 50%, #27ae60 50%, #27ae60 75%, #95a5a6 75%);"></div>
+            <div class="skin-option" data-skin="glow" style="background: radial-gradient(circle, #9b59b6 0%, #2c3e50 100%);"></div>
+        </div>
         <button id="startBtn">Gioca</button>
     </div>
 
     <div id="leaderboard">
         <h3>CLASSIFICA</h3>
         <div id="leaderboardContent"></div>
+    </div>
+
+    <div id="chatBox">
+        <div id="chatMessages"></div>
+        <input type="text" id="chatInput" placeholder="Premi Invio per scrivere..." maxlength="70">
     </div>
 
     <div id="gameOverScreen">
@@ -131,8 +196,12 @@
         const nickInput = document.getElementById('nickInput');
         const leaderboard = document.getElementById('leaderboard');
         const leaderboardContent = document.getElementById('leaderboardContent');
+        const chatBox = document.getElementById('chatBox');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const respawnBtn = document.getElementById('respawnBtn');
+        const skinOptions = document.querySelectorAll('.skin-option');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -147,6 +216,16 @@
         let mapWidth = 3500;
         let mapHeight = 3500;
         let inGame = false;
+        let selectedSkin = "default";
+
+        // Gestione della selezione visiva delle skin nel menu
+        skinOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                skinOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                selectedSkin = opt.getAttribute('data-skin');
+            });
+        });
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
@@ -162,6 +241,14 @@
                 startMenu.style.display = 'none';
                 gameOverScreen.style.display = 'none';
                 leaderboard.style.display = 'block';
+                chatBox.style.display = 'block';
+            }
+
+            if (data.type === 'chat_broadcast') {
+                const msgEl = document.createElement('div');
+                msgEl.innerHTML = `<strong>${data.name}:</strong> ${data.message}`;
+                chatMessages.appendChild(msgEl);
+                chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll in basso
             }
 
             if (data.type === 'update') {
@@ -174,6 +261,7 @@
                 if (inGame && myId && players[myId] && players[myId].dead) {
                     inGame = false;
                     gameOverScreen.style.display = 'block';
+                    chatBox.style.display = 'none';
                 }
                 
                 drawGame();
@@ -183,17 +271,20 @@
         startBtn.addEventListener('click', () => {
             let name = nickInput.value.trim();
             if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'join', name: name }));
+                socket.send(JSON.stringify({ type: 'join', name: name, skin: selectedSkin }));
             }
         });
         respawnBtn.addEventListener('click', () => {
             let name = nickInput.value.trim();
             if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'respawn', name: name }));
+                socket.send(JSON.stringify({ type: 'respawn', name: name, skin: selectedSkin }));
             }
         });
 
         window.addEventListener('mousemove', (event) => {
+            // Evita di muovere il cerchio se il giocatore sta scrivendo nella chat
+            if (document.activeElement === chatInput) return;
+
             if (socket.readyState === WebSocket.OPEN && inGame && players[myId]) {
                 let me = players[myId];
                 let avgX = 0, avgY = 0;
@@ -214,7 +305,24 @@
 
         window.addEventListener('keydown', (event) => {
             if (event.code === 'Space' && inGame && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'split' }));
+                // Esegue lo split solo se non si sta scrivendo in chat
+                if (document.activeElement !== chatInput) {
+                    socket.send(JSON.stringify({ type: 'split' }));
+                }
+            }
+
+            // GESTIONE TASTO INVIO PER ATTIVARE/INVIARE LA CHAT
+            if (event.code === 'Enter' && inGame) {
+                if (document.activeElement === chatInput) {
+                    let msg = chatInput.value.trim();
+                    if (msg.length > 0 && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'chat', message: msg }));
+                    }
+                    chatInput.value = "";
+                    chatInput.blur(); // Rilascia il focus dalla chat per tornare a muoversi
+                } else {
+                    chatInput.focus(); // Attiva la chat per scrivere
+                }
             }
         });
 
@@ -261,6 +369,62 @@
             ctx.restore();
         }
 
+        // MOTORE GRAFICO AVANZATO PER DISEGNARE LE SKIN DINAMICHE
+        function drawSkin(cell, skinType, baseColor) {
+            ctx.save();
+            
+            if (skinType === "stripes") {
+                // SKIN A STRISCE MULTICOLORE
+                ctx.beginPath();
+                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
+                ctx.clip(); // Limita il disegno geometrico dentro il cerchio della cella
+                
+                ctx.fillStyle = baseColor;
+                ctx.fill();
+                
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = cell.radius * 0.15;
+                for (let i = -cell.radius; i < cell.radius; i += cell.radius * 0.4) {
+                    ctx.beginPath();
+                    ctx.moveTo(cell.x - cell.radius, cell.y + i);
+                    ctx.lineTo(cell.x + cell.radius, cell.y + i - cell.radius);
+                    ctx.stroke();
+                }
+            } else if (skinType === "camo") {
+                // SKIN MILITARE / MIMETICA
+                ctx.beginPath();
+                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#27ae60';
+                ctx.fill();
+                
+                // Disegna delle chiazze scure casuali fisse basate sulla matematica del cerchio
+                ctx.fillStyle = '#1e7e34';
+                ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.2, cell.y - cell.radius*0.3, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cell.x + cell.radius*0.3, cell.y + cell.radius*0.2, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#95a5a6';
+                ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.3, cell.y + cell.radius*0.3, cell.radius * 0.25, 0, Math.PI*2); ctx.fill();
+            } else if (skinType === "glow") {
+                // SKIN SPAZIALE CON Sfumatura RADIALE (NUCLEO LUMINOSO)
+                let gradient = ctx.createRadialGradient(cell.x, cell.y, cell.radius * 0.1, cell.x, cell.y, cell.radius);
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(0.2, '#9b59b6');
+                gradient.addColorStop(1, '#2c3e50');
+                
+                ctx.beginPath();
+                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            } else {
+                // SKIN CLASSICA MONOCOLORE (DEFAULT)
+                ctx.beginPath();
+                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
+                ctx.fillStyle = baseColor;
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -275,9 +439,11 @@
             ctx.save();
             ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
 
+            // Confini mappa
             ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 6;
             ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
+            // Griglia quadrettata
             ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
             for (let x = 0; x <= mapWidth; x += 50) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapHeight); ctx.stroke();
@@ -286,27 +452,27 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapWidth, y); ctx.stroke();
             }
 
+            // Disegna il cibo
             for (let i = 0; i < food.length; i++) {
                 let f = food[i];
                 ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
                 ctx.fillStyle = f.color; ctx.fill(); ctx.closePath();
             }
 
+            // Disegna gli ostacoli rigidi
             for (let i = 0; i < obstacles.length; i++) {
                 let obs = obstacles[i];
                 drawSpikeyObstacle(obs.x, obs.y, obs.radius);
             }
 
+            // Disegna i giocatori con le rispettive skin
             for (let id in players) {
                 let p = players[id];
                 if (p.dead) continue;
 
                 p.cells.forEach(cell => {
-                    ctx.beginPath();
-                    ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = p.color;
-                    ctx.fill();
-                    ctx.closePath();
+                    // Chiama la nuova funzione grafica passando il tipo di skin e colore del giocatore
+                    drawSkin(cell, p.skin, p.color);
 
                     ctx.fillStyle = "#ffffff";
                     ctx.font = `bold ${Math.max(11, cell.radius * 0.38)}px Arial`;
@@ -335,4 +501,3 @@
     </script>
 </body>
 </html>
-
