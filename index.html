@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Agar.io Prototipo Finale</title>
+    <title>Agar.io Prototipo Finale - Spine</title>
     <style>
         body {
             margin: 0;
@@ -137,16 +137,15 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Rileva automaticamente se il gioco è online o in locale e imposta il protocollo corretto
-	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	const socket = new WebSocket(`${protocol}//${window.location.host}`);
-
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socket = new WebSocket(`${protocol}//${window.location.host}`);
 
         let myId = null;
         let players = {};
         let food = [];
-        let mapWidth = 2500;
-        let mapHeight = 2500;
+        let obstacles = []; 
+        let mapWidth = 3500;
+        let mapHeight = 3500;
         let inGame = false;
 
         socket.onmessage = (event) => {
@@ -168,6 +167,7 @@
             if (data.type === 'update') {
                 players = data.players;
                 food = data.food;
+                obstacles = data.obstacles || [];
                 
                 updateLeaderboardUI(data.leaderboard);
                 
@@ -186,7 +186,6 @@
                 socket.send(JSON.stringify({ type: 'join', name: name }));
             }
         });
-
         respawnBtn.addEventListener('click', () => {
             let name = nickInput.value.trim();
             if (socket.readyState === WebSocket.OPEN) {
@@ -197,7 +196,6 @@
         window.addEventListener('mousemove', (event) => {
             if (socket.readyState === WebSocket.OPEN && inGame && players[myId]) {
                 let me = players[myId];
-                
                 let avgX = 0, avgY = 0;
                 me.cells.forEach(c => { avgX += c.x; avgY += c.y; });
                 avgX /= me.cells.length;
@@ -229,6 +227,40 @@
             leaderboardContent.innerHTML = html;
         }
 
+        function drawSpikeyObstacle(x, y, radius) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.fillStyle = '#2ecc71'; 
+            ctx.strokeStyle = '#27ae60'; 
+            ctx.lineWidth = 4;
+            
+            let spikes = 18; 
+            let outerRadius = radius;
+            let innerRadius = radius - 10;
+            let rot = Math.PI / 2 * 3;
+            let cx = x;
+            let cy = y;
+            let step = Math.PI / spikes;
+
+            ctx.moveTo(cx, cy - outerRadius);
+            for (let i = 0; i < spikes; i++) {
+                let px = cx + Math.cos(rot) * outerRadius;
+                let py = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(px, py);
+                rot += step;
+
+                px = cx + Math.cos(rot) * innerRadius;
+                py = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(px, py);
+                rot += step;
+            }
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -258,6 +290,11 @@
                 let f = food[i];
                 ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
                 ctx.fillStyle = f.color; ctx.fill(); ctx.closePath();
+            }
+
+            for (let i = 0; i < obstacles.length; i++) {
+                let obs = obstacles[i];
+                drawSpikeyObstacle(obs.x, obs.y, obs.radius);
             }
 
             for (let id in players) {

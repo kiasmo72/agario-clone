@@ -3,9 +3,10 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const MAP_WIDTH = 2500; 
-const MAP_HEIGHT = 2500;
-const MAX_FOOD = 300;
+const MAP_WIDTH = 3500; 
+const MAP_HEIGHT = 3500;
+const MAX_FOOD = 450;       
+const MAX_OBSTACLES = 15;   
 const MERGE_DELAY = 15000; 
 
 const server = http.createServer((req, res) => {
@@ -25,6 +26,7 @@ const wss = new WebSocket.Server({ server });
 
 let players = {};
 let food = [];
+let obstacles = []; 
 
 function spawnFood() {
     return {
@@ -36,9 +38,17 @@ function spawnFood() {
     };
 }
 
-for (let i = 0; i < MAX_FOOD; i++) {
-    food.push(spawnFood());
+function spawnObstacle() {
+    return {
+        id: Math.random().toString(36).substring(2, 9),
+        x: Math.random() * (MAP_WIDTH - 200) + 100,
+        y: Math.random() * (MAP_HEIGHT - 200) + 100,
+        radius: 60 
+    };
 }
+
+for (let i = 0; i < MAX_FOOD; i++) { food.push(spawnFood()); }
+for (let i = 0; i < MAX_OBSTACLES; i++) { obstacles.push(spawnObstacle()); }
 
 function createPlayerData(id, name) {
     return {
@@ -84,7 +94,6 @@ wss.on('connection', (ws) => {
                     cell.targetY = data.y;
                 });
             }
-
             if (data.type === 'split' && players[id] && !players[id].dead) {
                 let p = players[id];
                 if (p.cells.length >= 16) return;
@@ -187,6 +196,46 @@ setInterval(() => {
         let p = players[id];
         if (p.dead) continue;
 
+        let explodedCells = [];
+        for (let i = p.cells.length - 1; i >= 0; i--) {
+            let cell = p.cells[i];
+
+            obstacles.forEach(obs => {
+                let dx = cell.x - obs.x;
+                let dy = cell.y - obs.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (cell.radius > obs.radius && distance < cell.radius) {
+                    if (p.cells.length + explodedCells.length < 16) {
+                        p.cells.splice(i, 1);
+                        let splitRadius = cell.radius / 2; 
+                        let mergeTime = now + MERGE_DELAY;
+                        let angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+                        angles.forEach(angle => {
+                            explodedCells.push({
+                                x: cell.x + Math.cos(angle) * splitRadius,
+                                y: cell.y + Math.sin(angle) * splitRadius,
+                                radius: splitRadius,
+                                targetX: cell.targetX,
+                                targetY: cell.targetY,
+                                vx: Math.cos(angle) * 18, 
+                                vy: Math.sin(angle) * 18,
+                                canMergeAfter: mergeTime
+                            });
+                        });
+                    }
+                }
+            });
+        }
+        if (explodedCells.length > 0) {
+            p.cells = p.cells.concat(explodedCells);
+        }
+    }
+
+    for (let id in players) {
+        let p = players[id];
+        if (p.dead) continue;
+
         p.cells.forEach(cell => {
             for (let i = food.length - 1; i >= 0; i--) {
                 let f = food[i];
@@ -227,9 +276,7 @@ setInterval(() => {
                 }
             });
 
-            if (p2.cells.length === 0) {
-                p2.dead = true;
-            }
+            if (p2.cells.length === 0) { p2.dead = true; }
         }
     }
 
@@ -237,10 +284,7 @@ setInterval(() => {
         .filter(p => !p.dead)
         .map(p => {
             let totalRadius = p.cells.reduce((sum, c) => sum + c.radius, 0);
-            return {
-                name: p.name,
-                score: Math.floor(totalRadius * 10)
-            };
+            return { name: p.name, score: Math.floor(totalRadius * 10) };
         })
         .sort((a, b) => b.score - a.score)
         .slice(0, 5);
@@ -249,6 +293,7 @@ setInterval(() => {
         type: 'update', 
         players: players,
         food: food,
+        obstacles: obstacles,
         leaderboard: leaderboard
     });
 
@@ -260,7 +305,6 @@ setInterval(() => {
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
     console.log(`Server pronto sulla porta ${PORT}`);
 });
