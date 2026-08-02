@@ -1,0 +1,12 @@
+{
+  "name": "agario-clone",
+  "version": "1.0.0",
+  "description": "Clone multiplayer di Agar.io",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
