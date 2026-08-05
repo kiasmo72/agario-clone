@@ -2,31 +2,19 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Agar.io Pro - Chat & Skin</title>
+    <title>Agar.io Pro - Kiasmo70</title>
     <style>
-        body {
-            margin: 0; overflow: hidden; background-color: #c4c4c4;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none;
-        }
+        body { margin: 0; overflow: hidden; background-color: #c4c4c4; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; background-color: #ffffff; }
-        #startMenu {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.95); padding: 30px; text-align: center;
-            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 340px; z-index: 10;
-        }
+        #startMenu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(255, 255, 255, 0.95); padding: 30px; text-align: center; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 340px; z-index: 10; }
         #startMenu h1 { margin-top: 0; color: #2c3e50; margin-bottom: 5px; }
         .credits { font-size: 13px; color: #7f8c8d; font-weight: bold; margin-bottom: 20px; letter-spacing: 0.5px; }
-        #gameCredits {
-            position: absolute; top: 20px; left: 20px; background-color: rgba(255, 255, 255, 0.85);
-            padding: 8px 15px; border-radius: 6px; font-weight: bold; color: #2c3e50; font-size: 14px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15); pointer-events: none; display: none;
-        }
+        #gameCredits { position: absolute; top: 20px; left: 20px; background-color: rgba(255, 255, 255, 0.85); padding: 8px 15px; border-radius: 6px; font-weight: bold; color: #2c3e50; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: none; }
         #nickInput { width: 85%; padding: 12px; font-size: 16px; border: 2px solid #bdc3c7; border-radius: 6px; margin-bottom: 15px; outline: none; }
         .skin-container { display: flex; justify-content: space-around; margin-bottom: 20px; }
         .skin-option { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #bdc3c7; cursor: pointer; transition: 0.2s; }
         .skin-option.selected { border-color: #2ecc71; transform: scale(1.1); }
-        #startBtn { background-color: #3498db; color: white; border: none; padding: 12px 35px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 95%; }
-        #startBtn:hover { background-color: #2980b9; }
+        #startBtn { background-color: #3498db; color: white; border: none; padding: 12px 35px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 95%; }
         #leaderboard { position: absolute; top: 20px; right: 20px; background-color: rgba(255, 255, 255, 0.85); padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); width: 220px; pointer-events: none; display: none; }
         #leaderboard h3 { margin: 0 0 10px 0; text-align: center; color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 5px; }
         .leaderboard-row { display: flex; justify-content: space-between; margin: 5px 0; font-weight: bold; color: #34495e; }
@@ -41,7 +29,6 @@
     <div id="startMenu">
         <h1>Agar.io Pro</h1>
         <div class="credits">Creato da Kiasmo70</div>
-        
         <input type="text" id="nickInput" placeholder="Inserisci Nickname" maxlength="14">
         <p style="color: #7f8c8d; font-size: 14px; margin: 5px 0 10px 0;">Scegli la tua Skin:</p>
         <div class="skin-container">
@@ -52,319 +39,131 @@
         </div>
         <button id="startBtn">Gioca</button>
     </div>
-
     <div id="gameCredits">Creato da Kiasmo70</div>
-
-    <div id="leaderboard">
-        <h3>CLASSIFICA</h3>
-        <div id="leaderboardContent"></div>
-    </div>
-
-    <div id="chatBox">
-        <div id="chatMessages"></div>
-        <input type="text" id="chatInput" placeholder="Premi Invio per scrivere..." maxlength="70">
-    </div>
-
-    <div id="gameOverScreen">
-        <h1>Sei stato eliminato!</h1>
-        <button id="respawnBtn">Rigioca</button>
-    </div>
-
+    <div id="leaderboard"><h3>CLASSIFICA</h3><div id="leaderboardContent"></div></div>
+    <div id="chatBox"><div id="chatMessages"></div><input type="text" id="chatInput" placeholder="Premi Invio per scrivere..." maxlength="70"></div>
+    <div id="gameOverScreen"><h1>Sei stato eliminato!</h1><button id="respawnBtn">Rigioca</button></div>
     <canvas id="gameCanvas"></canvas>
-
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const startMenu = document.getElementById('startMenu');
-        const startBtn = document.getElementById('startBtn');
-        const nickInput = document.getElementById('nickInput');
-        const leaderboard = document.getElementById('leaderboard');
-        const leaderboardContent = document.getElementById('leaderboardContent');
-        const chatBox = document.getElementById('chatBox');
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const respawnBtn = document.getElementById('respawnBtn');
-        const skinOptions = document.querySelectorAll('.skin-option');
-        const gameCredits = document.getElementById('gameCredits');
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
+        const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
+        const startMenu = document.getElementById('startMenu'), startBtn = document.getElementById('startBtn'), nickInput = document.getElementById('nickInput');
+        const leaderboard = document.getElementById('leaderboard'), leaderboardContent = document.getElementById('leaderboardContent');
+        const chatBox = document.getElementById('chatBox'), chatMessages = document.getElementById('chatMessages'), chatInput = document.getElementById('chatInput');
+        const gameOverScreen = document.getElementById('gameOverScreen'), respawnBtn = document.getElementById('respawnBtn'), skinOptions = document.querySelectorAll('.skin-option'), gameCredits = document.getElementById('gameCredits');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const socket = new WebSocket(`${protocol}//${window.location.host}`);
+        let myId = null, players = {}, food = [], obstacles = [], ejectedMass = [], inGame = false, selectedSkin = "default";
 
-        let myId = null;
-        let players = {};
-        let food = [];
-        let obstacles = []; 
-        let mapWidth = 3500;
-        let mapHeight = 3500;
-        let inGame = false;
-        let selectedSkin = "default";
-
-        skinOptions.forEach(opt => {
-            opt.addEventListener('click', () => {
-                skinOptions.forEach(o => o.classList.remove('selected'));
-                opt.classList.add('selected');
-                selectedSkin = opt.getAttribute('data-skin');
-            });
-        });
-
+        skinOptions.forEach(opt => { opt.addEventListener('click', () => { skinOptions.forEach(o => o.classList.remove('selected')); opt.classList.add('selected'); selectedSkin = opt.getAttribute('data-skin'); }); });
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
-            if (data.type === 'welcome') {
-                myId = data.id;
-                mapWidth = data.mapWidth;
-                mapHeight = data.mapHeight;
-            }
-
-            if (data.type === 'spawn_confirm') {
-                inGame = true;
-                startMenu.style.display = 'none';
-                gameOverScreen.style.display = 'none';
-                leaderboard.style.display = 'block';
-                chatBox.style.display = 'block';
-                gameCredits.style.display = 'block';
-            }
-
-            if (data.type === 'chat_broadcast') {
-                const msgEl = document.createElement('div');
-                msgEl.innerHTML = `<strong>${data.name}:</strong> ${data.message}`;
-                chatMessages.appendChild(msgEl);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
+            if (data.type === 'welcome') { myId = data.id; }
+            if (data.type === 'spawn_confirm') { inGame = true; startMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; leaderboard.style.display = 'block'; chatBox.style.display = 'block'; gameCredits.style.display = 'block'; }
+            if (data.type === 'chat_broadcast') { const msgEl = document.createElement('div'); msgEl.innerHTML = `<strong>${data.name}:</strong> ${data.message}`; chatMessages.appendChild(msgEl); chatMessages.scrollTop = chatMessages.scrollHeight; }
             if (data.type === 'update') {
-                players = data.players;
-                food = data.food;
-                obstacles = data.obstacles || [];
-                
-                updateLeaderboardUI(data.leaderboard);
-                
-                if (inGame && myId && players[myId] && players[myId].dead) {
-                    inGame = false;
-                    gameOverScreen.style.display = 'block';
-                    chatBox.style.display = 'none';
-                    gameCredits.style.display = 'none';
-                }
-                
+                players = data.players; food = data.food; obstacles = data.obstacles || []; ejectedMass = data.ejectedMass || [];
+                if (list = data.leaderboard) { let html = ""; list.forEach((item, index) => { html += `<div class="leaderboard-row"><span>${index + 1}. ${item.name}</span><span>${item.score}</span></div>`; }); leaderboardContent.innerHTML = html; }
+                if (inGame && myId && players[myId] && players[myId].dead) { inGame = false; gameOverScreen.style.display = 'block'; chatBox.style.display = 'none'; gameCredits.style.display = 'none'; }
                 drawGame();
             }
         };
-
-        startBtn.addEventListener('click', () => {
-            let name = nickInput.value.trim();
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'join', name: name, skin: selectedSkin }));
-            }
-        });
-        respawnBtn.addEventListener('click', () => {
-            let name = nickInput.value.trim();
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'respawn', name: name, skin: selectedSkin }));
-            }
-        });
+        startBtn.addEventListener('click', () => { let name = nickInput.value.trim(); if (socket.readyState === WebSocket.OPEN) { socket.send(JSON.stringify({ type: 'join', name, skin: selectedSkin })); } });
+        respawnBtn.addEventListener('click', () => { let name = nickInput.value.trim(); if (socket.readyState === WebSocket.OPEN) { socket.send(JSON.stringify({ type: 'respawn', name, skin: selectedSkin })); } });
 
         window.addEventListener('mousemove', (event) => {
             if (document.activeElement === chatInput) return;
-
             if (socket.readyState === WebSocket.OPEN && inGame && players[myId]) {
-                let me = players[myId];
-                let avgX = 0, avgY = 0;
+                let me = players[myId], avgX = 0, avgY = 0;
                 me.cells.forEach(c => { avgX += c.x; avgY += c.y; });
-                avgX /= me.cells.length;
-                avgY /= me.cells.length;
-
-                let mouseRelX = event.clientX - canvas.width / 2;
-                let mouseRelY = event.clientY - canvas.height / 2;
-
-                socket.send(JSON.stringify({
-                    type: 'move',
-                    x: avgX + mouseRelX,
-                    y: avgY + mouseRelY
-                }));
+                avgX /= me.cells.length; avgY /= me.cells.length;
+                socket.send(JSON.stringify({ type: 'move', x: avgX + (event.clientX - canvas.width / 2), y: avgY + (event.clientY - canvas.height / 2) }));
             }
         });
 
         window.addEventListener('keydown', (event) => {
-            if (event.code === 'Space' && inGame && socket.readyState === WebSocket.OPEN) {
-                if (document.activeElement !== chatInput) {
-                    socket.send(JSON.stringify({ type: 'split' }));
-                }
+            if (inGame && socket.readyState === WebSocket.OPEN && document.activeElement !== chatInput) {
+                if (event.code === 'Space') socket.send(JSON.stringify({ type: 'split' }));
+                // ASCOLTO DEL TASTO C PER IL LANCIO DELLA MASSA
+                if (event.code === 'KeyC') socket.send(JSON.stringify({ type: 'eject' }));
             }
-
             if (event.code === 'Enter' && inGame) {
                 if (document.activeElement === chatInput) {
                     let msg = chatInput.value.trim();
-                    if (msg.length > 0 && socket.readyState === WebSocket.OPEN) {
-                        socket.send(JSON.stringify({ type: 'chat', message: msg }));
-                    }
-                    chatInput.value = "";
-                    chatInput.blur();
-                } else {
-                    chatInput.focus();
-                }
+                    if (msg.length > 0 && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'chat', message: msg }));
+                    chatInput.value = ""; chatInput.blur();
+                } else { chatInput.focus(); }
             }
         });
 
-        function updateLeaderboardUI(list) {
-            if (!list || !inGame) return;
-            let html = "";
-            list.forEach((item, index) => {
-                html += `<div class="leaderboard-row"><span>${index + 1}. ${item.name}</span><span>${item.score}</span></div>`;
-            });
-            leaderboardContent.innerHTML = html;
-        }
-
         function drawSpikeyObstacle(x, y, radius) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.fillStyle = '#2ecc71'; 
-            ctx.strokeStyle = '#27ae60'; 
-            ctx.lineWidth = 4;
-            
-            let spikes = 18; 
-            let outerRadius = radius;
-            let innerRadius = radius - 10;
-            let rot = Math.PI / 2 * 3;
-            let cx = x;
-            let cy = y;
-            let step = Math.PI / spikes;
-
-            ctx.moveTo(cx, cy - outerRadius);
+            ctx.save(); ctx.beginPath(); ctx.fillStyle = '#2ecc71'; ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 4;
+            let spikes = 18, rot = Math.PI / 2 * 3, step = Math.PI / spikes;
+            ctx.moveTo(x, y - radius);
             for (let i = 0; i < spikes; i++) {
-                let px = cx + Math.cos(rot) * outerRadius;
-                let py = cy + Math.sin(rot) * outerRadius;
-                ctx.lineTo(px, py);
-                rot += step;
-
-                px = cx + Math.cos(rot) * innerRadius;
-                py = cy + Math.sin(rot) * innerRadius;
-                ctx.lineTo(px, py);
-                rot += step;
+                ctx.lineTo(x + Math.cos(rot) * radius, y + Math.sin(rot) * radius); rot += step;
+                ctx.lineTo(x + Math.cos(rot) * (radius - 10), y + Math.sin(rot) * (radius - 10)); rot += step;
             }
-            ctx.lineTo(cx, cy - outerRadius);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
+            ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
         }
 
         function drawSkin(cell, skinType, baseColor) {
             ctx.save();
-            
             if (skinType === "stripes") {
-                ctx.beginPath();
-                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.fillStyle = baseColor;
-                ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = cell.radius * 0.15;
-                for (let i = -cell.radius; i < cell.radius; i += cell.radius * 0.4) {
-                    ctx.beginPath();
-                    ctx.moveTo(cell.x - cell.radius, cell.y + i);
-                    ctx.lineTo(cell.x + cell.radius, cell.y + i - cell.radius);
-                    ctx.stroke();
-                }
+                ctx.beginPath(); ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2); ctx.clip();
+                ctx.fillStyle = baseColor; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = cell.radius * 0.15;
+                for (let i = -cell.radius; i < cell.radius; i += cell.radius * 0.4) { ctx.beginPath(); ctx.moveTo(cell.x - cell.radius, cell.y + i); ctx.lineTo(cell.x + cell.radius, cell.y + i - cell.radius); ctx.stroke(); }
             } else if (skinType === "camo") {
-                ctx.beginPath();
-                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-                ctx.fillStyle = '#27ae60';
-                ctx.fill();
-                ctx.fillStyle = '#1e7e34';
-                ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.2, cell.y - cell.radius*0.3, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2); ctx.fillStyle = '#27ae60'; ctx.fill();
+                ctx.fillStyle = '#1e7e34'; ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.2, cell.y - cell.radius*0.3, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.arc(cell.x + cell.radius*0.3, cell.y + cell.radius*0.2, cell.radius * 0.4, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#95a5a6';
-                ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.3, cell.y + cell.radius*0.3, cell.radius * 0.25, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(cell.x - cell.radius*0.3, cell.y + cell.radius*0.3, cell.radius * 0.25, 0, Math.PI*2); ctx.fill();
             } else if (skinType === "glow") {
-                let gradient = ctx.createRadialGradient(cell.x, cell.y, cell.radius * 0.1, cell.x, cell.y, cell.radius);
-                gradient.addColorStop(0, '#ffffff');
-                gradient.addColorStop(0.2, '#9b59b6');
-                gradient.addColorStop(1, '#2c3e50');
-                ctx.beginPath();
-                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-                ctx.fillStyle = gradient;
-                ctx.fill();
+                let g = ctx.createRadialGradient(cell.x, cell.y, cell.radius * 0.1, cell.x, cell.y, cell.radius);
+                g.addColorStop(0, '#ffffff'); g.addColorStop(0.2, '#9b59b6'); g.addColorStop(1, '#2c3e50');
+                ctx.beginPath(); ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
             } else {
-                ctx.beginPath();
-                ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
-                ctx.fillStyle = baseColor;
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2); ctx.fillStyle = baseColor; ctx.fill();
             }
-            
             ctx.restore();
         }
 
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             if (!inGame || !players[myId]) return;
-            let me = players[myId];
-
-            let camX = 0, camY = 0;
+            let me = players[myId], camX = 0, camY = 0;
             me.cells.forEach(c => { camX += c.x; camY += c.y; });
-            camX /= me.cells.length;
-            camY /= me.cells.length;
+            camX /= me.cells.length; camY /= me.cells.length;
 
-            ctx.save();
-            ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
-
-            ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 6;
-            ctx.strokeRect(0, 0, mapWidth, mapHeight);
+            ctx.save(); ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
+            ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 6; ctx.strokeRect(0, 0, 3500, 3500);
 
             ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
-            for (let x = 0; x <= mapWidth; x += 50) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapHeight); ctx.stroke();
-            }
-            for (let y = 0; y <= mapHeight; y += 50) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapWidth, y); ctx.stroke();
-            }
+            for (let x = 0; x <= 3500; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 3500); ctx.stroke(); }
+            for (let y = 0; y <= 3500; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(3500, y); ctx.stroke(); }
 
-            for (let i = 0; i < food.length; i++) {
-                let f = food[i];
-                ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
-                ctx.fillStyle = f.color; ctx.fill(); ctx.closePath();
-            }
-
-            for (let i = 0; i < obstacles.length; i++) {
-                let obs = obstacles[i];
-                drawSpikeyObstacle(obs.x, obs.y, obs.radius);
-            }
+            for (let i = 0; i < food.length; i++) { ctx.beginPath(); ctx.arc(food[i].x, food[i].y, food[i].radius, 0, Math.PI * 2); ctx.fillStyle = food[i].color; ctx.fill(); }
+            
+            // DISEGNA LA MASSA ESPULSA DAGLI UTENTI
+            for (let i = 0; i < ejectedMass.length; i++) { ctx.beginPath(); ctx.arc(ejectedMass[i].x, ejectedMass[i].y, ejectedMass[i].radius, 0, Math.PI * 2); ctx.fillStyle = ejectedMass[i].color; ctx.fill(); ctx.strokeStyle = '#555555'; ctx.lineWidth = 2; ctx.stroke(); }
+            
+            for (let i = 0; i < obstacles.length; i++) drawSpikeyObstacle(obstacles[i].x, obstacles[i].y, obstacles[i].radius);
 
             for (let id in players) {
-                let p = players[id];
-                if (p.dead) continue;
-
+                let p = players[id]; if (p.dead) continue;
                 p.cells.forEach(cell => {
                     drawSkin(cell, p.skin, p.color);
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `bold ${Math.max(11, cell.radius * 0.38)}px Arial`;
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.strokeStyle = "#000000";
-                    ctx.lineWidth = Math.max(2, cell.radius * 0.08);
-                    ctx.strokeText(p.name, cell.x, cell.y);
-                    ctx.fillText(p.name, cell.x, cell.y);
-
-                    if (id === myId) {
-                        ctx.strokeStyle = '#2c3e50';
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-                    }
+                    ctx.fillStyle = "#ffffff"; ctx.font = `bold ${Math.max(11, cell.radius * 0.38)}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.strokeStyle = "#000000"; ctx.lineWidth = Math.max(2, cell.radius * 0.08);
+                    ctx.strokeText(p.name, cell.x, cell.y); ctx.fillText(p.name, cell.x, cell.y);
+                    if (id === myId) { ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2; ctx.stroke(); }
                 });
             }
-
             ctx.restore();
         }
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
     </script>
 </body>
 </html>
+
+

@@ -1,327 +1,127 @@
-const WebSocket = require('ws');
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-
-const MAP_WIDTH = 3500; 
-const MAP_HEIGHT = 3500;
-const MAX_FOOD = 450;       
-const MAX_OBSTACLES = 15;   
-const MERGE_DELAY = 15000; 
+const WebSocket = require('ws'), http = require('http'), fs = require('fs'), path = require('path');
+const MAP = 3500, MAX_FOOD = 450, MAX_OBS = 15, MERGE_DELAY = 15000;
+let players = {}, food = [], obstacles = [], ejectedMass = [];
 
 const server = http.createServer((req, res) => {
-    if (req.url === '/' || req.url === '/index.html') {
-        fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-            if (err) {
-                res.writeHead(500);
-                return res.end('Errore nel caricamento di index.html');
-            }
-            res.writeHead(200, { 'Content-Type': 'text/html' });
-            res.end(data);
-        });
-    }
+    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
+        res.writeHead(err ? 500 : 200, { 'Content-Type': 'text/html' });
+        res.end(err ? 'Errore' : data);
+    });
 });
-
 const wss = new WebSocket.Server({ server });
 
-let players = {};
-let food = [];
-let obstacles = []; 
+const randPos = () => ({ x: Math.random() * MAP, y: Math.random() * MAP });
+const getDist = (p1, p2) => Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 
-function spawnFood() {
-    return {
-        id: Math.random().toString(36).substring(2, 9),
-        x: Math.random() * MAP_WIDTH,
-        y: Math.random() * MAP_HEIGHT,
-        radius: 5,
-        color: `hsl(${Math.random() * 360}, 100%, 50%)`
-    };
-}
-
-function spawnObstacle() {
-    return {
-        id: Math.random().toString(36).substring(2, 9),
-        x: Math.random() * (MAP_WIDTH - 200) + 100,
-        y: Math.random() * (MAP_HEIGHT - 200) + 100,
-        radius: 60 
-    };
-}
-
-for (let i = 0; i < MAX_FOOD; i++) { food.push(spawnFood()); }
-for (let i = 0; i < MAX_OBSTACLES; i++) { obstacles.push(spawnObstacle()); }
-
-function createPlayerData(id, name, skin) {
-    return {
-        id: id,
-        name: name || "Anonimo-" + Math.floor(100 + Math.random() * 900),
-        color: `hsl(${Math.random() * 360}, 80%, 60%)`,
-        skin: skin || "default", // Memorizza il tipo di skin scelto
-        dead: false,
-        cells: [{
-            x: Math.random() * MAP_WIDTH,
-            y: Math.random() * MAP_HEIGHT,
-            radius: 22,
-            targetX: MAP_WIDTH / 2,
-            targetY: MAP_HEIGHT / 2,
-            vx: 0, 
-            vy: 0, 
-            canMergeAfter: Date.now()
-        }]
-    };
-}
+for (let i = 0; i < MAX_FOOD; i++) food.push({ id: i, ...randPos(), radius: 5, color: `hsl(${Math.random()*360},100%,50%)` });
+for (let i = 0; i < MAX_OBS; i++) obstacles.push({ id: i, ...randPos(), radius: 60 });
 
 wss.on('connection', (ws) => {
     const id = Math.random().toString(36).substring(2, 9);
+    ws.send(JSON.stringify({ type: 'welcome', id, mapWidth: MAP, mapHeight: MAP }));
 
-    ws.send(JSON.stringify({ 
-        type: 'welcome', 
-        id: id,
-        mapWidth: MAP_WIDTH,
-        mapHeight: MAP_HEIGHT
-    }));
-
-    ws.on('message', (message) => {
+    ws.on('message', (msg) => {
         try {
-            const data = JSON.parse(message);
-            
-            if (data.type === 'join' || data.type === 'respawn') {
-                // Passa anche la skin scelta al creatore del giocatore
-                players[id] = createPlayerData(id, data.name, data.skin);
+            const data = JSON.parse(msg);
+            if ((data.type === 'join' || data.type === 'respawn')) {
+                players[id] = { id, name: data.name || "Anonimo", color: `hsl(${Math.random()*360},80%,60%)`, skin: data.skin, dead: false, cells: [{ ...randPos(), radius: 22, targetX: MAP/2, targetY: MAP/2, vx: 0, vy: 0, canMergeAfter: Date.now() }] };
                 ws.send(JSON.stringify({ type: 'spawn_confirm' }));
             }
-            
             if (data.type === 'move' && players[id] && !players[id].dead) {
-                players[id].cells.forEach(cell => {
-                    cell.targetX = data.x;
-                    cell.targetY = data.y;
-                });
+                players[id].cells.forEach(c => { c.targetX = data.x; c.targetY = data.y; });
             }
-
-            // GESTIONE MESSAGGI DI CHAT
-            if (data.type === 'chat' && players[id] && !players[id].dead) {
-                const chatPayload = JSON.stringify({
-                    type: 'chat_broadcast',
-                    name: players[id].name,
-                    message: data.message.substring(0, 70) // Taglia messaggi troppo lunghi
-                });
-                // Invia il messaggio a tutti i client connessi
-                wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(chatPayload);
+            if (data.type === 'chat' && players[id]) {
+                wss.clients.forEach(c => c.readyState === WebSocket.OPEN && c.send(JSON.stringify({ type: 'chat_broadcast', name: players[id].name, message: data.message.substring(0, 70) })));
+            }
+            if (data.type === 'eject' && players[id] && !players[id].dead) {
+                players[id].cells.forEach(c => {
+                    if (c.radius > 28) {
+                        let dx = c.targetX - c.x, dy = c.targetY - c.y, d = Math.sqrt(dx*dx + dy*dy) || 1;
+                        c.radius = Math.sqrt(c.radius * c.radius - 100);
+                        ejectedMass.push({ x: c.x + (dx/d)*(c.radius+15), y: c.y + (dy/d)*(c.radius+15), radius: 10, color: players[id].color, vx: (dx/d)*18, vy: (dy/d)*18 });
                     }
                 });
             }
-            if (data.type === 'split' && players[id] && !players[id].dead) {
-                let p = players[id];
-                if (p.cells.length >= 16) return;
-
-                let newCells = [];
-                p.cells.forEach(cell => {
-                    if (cell.radius > 35 && p.cells.length + newCells.length < 16) {
-                        let dx = cell.targetX - cell.x;
-                        let dy = cell.targetY - cell.y;
-                        let dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist === 0) dist = 1;
-
-                        let dirX = dx / dist;
-                        let dirY = dy / dist;
-
-                        let newRadius = cell.radius / Math.sqrt(2);
-                        cell.radius = newRadius;
-
-                        let mergeTime = Date.now() + MERGE_DELAY;
-                        cell.canMergeAfter = mergeTime;
-
-                        newCells.push({
-                            x: cell.x + dirX * newRadius,
-                            y: cell.y + dirY * newRadius,
-                            radius: newRadius,
-                            targetX: cell.targetX,
-                            targetY: cell.targetY,
-                            vx: dirX * 25, 
-                            vy: dirY * 25,
-                            canMergeAfter: mergeTime
-                        });
+            if (data.type === 'split' && players[id] && !players[id].dead && players[id].cells.length < 16) {
+                let p = players[id], newCells = [];
+                p.cells.forEach(c => {
+                    if (c.radius > 35 && p.cells.length + newCells.length < 16) {
+                        let dx = c.targetX - c.x, dy = c.targetY - c.y, d = Math.sqrt(dx*dx + dy*dy) || 1;
+                        c.radius /= Math.sqrt(2);
+                        newCells.push({ x: c.x + (dx/d)*c.radius, y: c.y + (dy/d)*c.radius, radius: c.radius, targetX: c.targetX, targetY: c.targetY, vx: (dx/d)*25, vy: (dy/d)*25, canMergeAfter: Date.now() + MERGE_DELAY });
+                        c.canMergeAfter = Date.now() + MERGE_DELAY;
                     }
                 });
                 p.cells = p.cells.concat(newCells);
             }
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) {}
     });
-
-    ws.on('close', () => { delete players[id]; });
+    ws.on('close', () => delete players[id]);
 });
 
 setInterval(() => {
-    let now = Date.now();
-
+    ejectedMass.forEach(m => { m.x += m.vx; m.y += m.vy; m.vx *= 0.9; m.vy *= 0.9; });
+    
     for (let id in players) {
-        let p = players[id];
-        if (p.dead) continue;
-
-        p.cells.forEach(cell => {
-            let dx = cell.targetX - cell.x;
-            let dy = cell.targetY - cell.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-
-            let speed = Math.max(1.2, 7 - (cell.radius * 0.04));
-
-            if (distance > 2) {
-                cell.x += (dx / distance) * speed;
-                cell.y += (dy / distance) * speed;
-            }
-
-            cell.x += cell.vx;
-            cell.y += cell.vy;
-            cell.vx *= 0.90; 
-            cell.vy *= 0.90;
-
-            if (cell.x < 0) cell.x = 0; if (cell.x > MAP_WIDTH) cell.x = MAP_WIDTH;
-            if (cell.y < 0) cell.y = 0; if (cell.y > MAP_HEIGHT) cell.y = MAP_HEIGHT;
+        let p = players[id]; if (p.dead) continue;
+        p.cells.forEach(c => {
+            let dx = c.targetX - c.x, dy = c.targetY - c.y, d = Math.sqrt(dx*dx + dy*dy);
+            let speed = Math.max(1.2, 7 - (c.radius * 0.04));
+            if (d > 2) { c.x += (dx/d)*speed; c.y += (dy/d)*speed; }
+            c.x += c.vx; c.y += c.vy; c.vx *= 0.9; c.vy *= 0.9;
+            c.x = Math.max(0, Math.min(MAP, c.x)); c.y = Math.max(0, Math.min(MAP, c.y));
         });
 
+        // Fusioni interne
         for (let i = 0; i < p.cells.length; i++) {
             for (let j = i + 1; j < p.cells.length; j++) {
-                let c1 = p.cells[i];
-                let c2 = p.cells[j];
-
-                let dx = c1.x - c2.x;
-                let dy = c1.y - c2.y;
-                let dist = Math.sqrt(dx * dx + dy * dy);
-                let overlap = (c1.radius + c2.radius) - dist;
-
+                let c1 = p.cells[i], c2 = p.cells[j], d = getDist(c1, c2), overlap = (c1.radius + c2.radius) - d;
                 if (overlap > 0) {
-                    if (now > c1.canMergeAfter && now > c2.canMergeAfter) {
-                        c1.radius = Math.sqrt(c1.radius * c1.radius + c2.radius * c2.radius);
-                        p.cells.splice(j, 1);
-                        j--;
+                    if (Date.now() > c1.canMergeAfter && Date.now() > c2.canMergeAfter) {
+                        c1.radius = Math.sqrt(c1.radius**2 + c2.radius**2); p.cells.splice(j, 1); j--;
                     } else {
-                        if (dist === 0) dist = 1;
-                        c1.x += (dx / dist) * overlap * 0.5;
-                        c1.y += (dy / dist) * overlap * 0.5;
-                        c2.x -= (dx / dist) * overlap * 0.5;
-                        c2.y -= (dy / dist) * overlap * 0.5;
+                        let dx = c1.x - c2.x, dy = c1.y - c2.y, dist = d || 1;
+                        c1.x += (dx/dist)*overlap*0.5; c1.y += (dy/dist)*overlap*0.5;
+                        c2.x -= (dx/dist)*overlap*0.5; c2.y -= (dy/dist)*overlap*0.5;
                     }
                 }
             }
         }
     }
 
+    // Spine, Cibo e PvP
     for (let id in players) {
-        let p = players[id];
-        if (p.dead) continue;
-
-        let explodedCells = [];
-        for (let i = p.cells.length - 1; i >= 0; i--) {
-            let cell = p.cells[i];
-
-            obstacles.forEach(obs => {
-                let dx = cell.x - obs.x;
-                let dy = cell.y - obs.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (cell.radius > obs.radius && distance < cell.radius) {
-                    if (p.cells.length + explodedCells.length < 16) {
-                        p.cells.splice(i, 1);
-                        let splitRadius = cell.radius / 2; 
-                        let mergeTime = now + MERGE_DELAY;
-                        let angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
-                        angles.forEach(angle => {
-                            explodedCells.push({
-                                x: cell.x + Math.cos(angle) * splitRadius,
-                                y: cell.y + Math.sin(angle) * splitRadius,
-                                radius: splitRadius,
-                                targetX: cell.targetX,
-                                targetY: cell.targetY,
-                                vx: Math.cos(angle) * 18, 
-                                vy: Math.sin(angle) * 18,
-                                canMergeAfter: mergeTime
-                            });
-                        });
-                    }
+        let p = players[id]; if (p.dead) continue;
+        p.cells.forEach((c, idx) => {
+            obstacles.forEach(o => {
+                if (c.radius > o.radius && getDist(c, o) < c.radius && p.cells.length < 16) {
+                    p.cells.splice(idx, 1); let r = c.radius / 2;
+                    [0, Math.PI/2, Math.PI, Math.PI*1.5].forEach(a => p.cells.push({ x: c.x, y: c.y, radius: r, targetX: c.targetX, targetY: c.targetY, vx: Math.cos(a)*18, vy: Math.sin(a)*18, canMergeAfter: Date.now()+MERGE_DELAY }));
                 }
             });
-        }
-        if (explodedCells.length > 0) {
-            p.cells = p.cells.concat(explodedCells);
-        }
-    }
-
-    for (let id in players) {
-        let p = players[id];
-        if (p.dead) continue;
-
-        p.cells.forEach(cell => {
-            for (let i = food.length - 1; i >= 0; i--) {
-                let f = food[i];
-                let dx = cell.x - f.x;
-                let dy = cell.y - f.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < cell.radius) {
-                    food.splice(i, 1);
-                    cell.radius = Math.sqrt(cell.radius * cell.radius + f.radius * f.radius);
-                    food.push(spawnFood());
-                }
-            }
+            for (let i = food.length - 1; i >= 0; i--) if (getDist(c, food[i]) < c.radius) { c.radius = Math.sqrt(c.radius**2 + food[i].radius**2); food[i] = { ...food[i], ...randPos() }; }
+            for (let i = ejectedMass.length - 1; i >= 0; i--) if (getDist(c, ejectedMass[i]) < c.radius) { c.radius = Math.sqrt(c.radius**2 + ejectedMass[i].radius**2); ejectedMass.splice(i, 1); }
         });
     }
 
-    let playerIds = Object.keys(players);
-    for (let i = 0; i < playerIds.length; i++) {
-        let p1 = players[playerIds[i]];
-        if (p1.dead) continue;
-
-        for (let j = 0; j < playerIds.length; j++) {
-            if (i === j) continue;
-            let p2 = players[playerIds[j]];
-            if (p2.dead) continue;
-
+    let ids = Object.keys(players);
+    for (let i = 0; i < ids.length; i++) {
+        let p1 = players[ids[i]]; if (p1.dead) continue;
+        for (let j = 0; j < ids.length; j++) {
+            if (i === j) continue; let p2 = players[ids[j]]; if (p2.dead) continue;
             p1.cells.forEach(c1 => {
                 for (let k = p2.cells.length - 1; k >= 0; k--) {
-                    let c2 = p2.cells[k];
-                    let dx = c1.x - c2.x;
-                    let dy = c1.y - c2.y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (c1.radius > c2.radius * 1.15 && distance < c1.radius) {
-                        c1.radius = Math.sqrt(c1.radius * c1.radius + c2.radius * c2.radius);
-                        p2.cells.splice(k, 1); 
+                    if (c1.radius > p2.cells[k].radius * 1.15 && getDist(c1, p2.cells[k]) < c1.radius) {
+                        c1.radius = Math.sqrt(c1.radius**2 + p2.cells[k].radius**2); p2.cells.splice(k, 1);
                     }
                 }
             });
-
-            if (p2.cells.length === 0) { p2.dead = true; }
+            if (p2.cells.length === 0) p2.dead = true;
         }
     }
 
-    let leaderboard = Object.values(players)
-        .filter(p => !p.dead)
-        .map(p => {
-            let totalRadius = p.cells.reduce((sum, c) => sum + c.radius, 0);
-            return { name: p.name, score: Math.floor(totalRadius * 10) };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
-
-    const gameState = JSON.stringify({ 
-        type: 'update', 
-        players: players,
-        food: food,
-        obstacles: obstacles,
-        leaderboard: leaderboard
-    });
-
-    wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(gameState);
-        }
-    });
+    let lb = Object.values(players).filter(p => !p.dead).map(p => ({ name: p.name, score: Math.floor(p.cells.reduce((s, c) => s + c.radius, 0) * 10) })).sort((a, b) => b.score - a.score).slice(0, 5);
+    wss.clients.forEach(c => c.readyState === WebSocket.OPEN && c.send(JSON.stringify({ type: 'update', players, food, obstacles, ejectedMass, leaderboard: lb })));
 }, 1000 / 60);
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server pronto sulla porta ${PORT}`);
-});
+server.listen(process.env.PORT || 3000, () => console.log("Server Pronto"));
