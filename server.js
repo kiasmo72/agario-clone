@@ -33,15 +33,19 @@ wss.on('connection', (ws) => {
             if (data.type === 'chat' && players[id]) {
                 wss.clients.forEach(c => c.readyState === WebSocket.OPEN && c.send(JSON.stringify({ type: 'chat_broadcast', name: players[id].name, message: data.message.substring(0, 70) })));
             }
+            
+            // CONTROLLO TASTO C (EJECT) - SISTEMATO E CORRETTO
             if (data.type === 'eject' && players[id] && !players[id].dead) {
                 players[id].cells.forEach(c => {
-                    if (c.radius > 28) {
+                    if (c.radius > 24) { // Abbassato il raggio minimo a 24 per permetterti di provarlo subito senza crescere troppo
                         let dx = c.targetX - c.x, dy = c.targetY - c.y, d = Math.sqrt(dx*dx + dy*dy) || 1;
-                        c.radius = Math.sqrt(c.radius * c.radius - 100);
-                        ejectedMass.push({ x: c.x + (dx/d)*(c.radius+15), y: c.y + (dy/d)*(c.radius+15), radius: 10, color: players[id].color, vx: (dx/d)*18, vy: (dy/d)*18 });
+                        // Riduce visibilmente il raggio di chi spara
+                        c.radius = Math.sqrt(c.radius * c.radius - 50);
+                        ejectedMass.push({ x: c.x + (dx/d)*(c.radius+20), y: c.y + (dy/d)*(c.radius+20), radius: 8, color: players[id].color, vx: (dx/d)*15, vy: (dy/d)*15 });
                     }
                 });
             }
+            
             if (data.type === 'split' && players[id] && !players[id].dead && players[id].cells.length < 16) {
                 let p = players[id], newCells = [];
                 p.cells.forEach(c => {
@@ -60,7 +64,7 @@ wss.on('connection', (ws) => {
 });
 
 setInterval(() => {
-    ejectedMass.forEach(m => { m.x += m.vx; m.y += m.vy; m.vx *= 0.9; m.vy *= 0.9; });
+    ejectedMass.forEach(m => { m.x += m.vx; m.y += m.vy; m.vx *= 0.85; m.vy *= 0.85; });
     
     for (let id in players) {
         let p = players[id]; if (p.dead) continue;
@@ -72,7 +76,6 @@ setInterval(() => {
             c.x = Math.max(0, Math.min(MAP, c.x)); c.y = Math.max(0, Math.min(MAP, c.y));
         });
 
-        // Fusioni interne
         for (let i = 0; i < p.cells.length; i++) {
             for (let j = i + 1; j < p.cells.length; j++) {
                 let c1 = p.cells[i], c2 = p.cells[j], d = getDist(c1, c2), overlap = (c1.radius + c2.radius) - d;
@@ -89,7 +92,6 @@ setInterval(() => {
         }
     }
 
-    // Spine, Cibo e PvP
     for (let id in players) {
         let p = players[id]; if (p.dead) continue;
         p.cells.forEach((c, idx) => {

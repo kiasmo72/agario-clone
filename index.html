@@ -69,6 +69,7 @@
             }
         };
         startBtn.addEventListener('click', () => { let name = nickInput.value.trim(); if (socket.readyState === WebSocket.OPEN) { socket.send(JSON.stringify({ type: 'join', name, skin: selectedSkin })); } });
+
         respawnBtn.addEventListener('click', () => { let name = nickInput.value.trim(); if (socket.readyState === WebSocket.OPEN) { socket.send(JSON.stringify({ type: 'respawn', name, skin: selectedSkin })); } });
 
         window.addEventListener('mousemove', (event) => {
@@ -84,7 +85,7 @@
         window.addEventListener('keydown', (event) => {
             if (inGame && socket.readyState === WebSocket.OPEN && document.activeElement !== chatInput) {
                 if (event.code === 'Space') socket.send(JSON.stringify({ type: 'split' }));
-                // ASCOLTO DEL TASTO C PER IL LANCIO DELLA MASSA
+                // ATTIVAZIONE REALE DEL TASTO C LATO CLIENT
                 if (event.code === 'KeyC') socket.send(JSON.stringify({ type: 'eject' }));
             }
             if (event.code === 'Enter' && inGame) {
@@ -144,7 +145,6 @@
 
             for (let i = 0; i < food.length; i++) { ctx.beginPath(); ctx.arc(food[i].x, food[i].y, food[i].radius, 0, Math.PI * 2); ctx.fillStyle = food[i].color; ctx.fill(); }
             
-            // DISEGNA LA MASSA ESPULSA DAGLI UTENTI
             for (let i = 0; i < ejectedMass.length; i++) { ctx.beginPath(); ctx.arc(ejectedMass[i].x, ejectedMass[i].y, ejectedMass[i].radius, 0, Math.PI * 2); ctx.fillStyle = ejectedMass[i].color; ctx.fill(); ctx.strokeStyle = '#555555'; ctx.lineWidth = 2; ctx.stroke(); }
             
             for (let i = 0; i < obstacles.length; i++) drawSpikeyObstacle(obstacles[i].x, obstacles[i].y, obstacles[i].radius);
@@ -165,5 +165,4 @@
     </script>
 </body>
 </html>
-
 
